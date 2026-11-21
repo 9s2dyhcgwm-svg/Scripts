@@ -1,0 +1,114 @@
+-- Launcher integrity check detects accidental/tampered artifact changes only if this launcher is trusted.
+-- This single file is what testers loadstring(game:HttpGet(...))(). It fetches the large protected payload itself
+-- (from a second file next to this one in the same repository) the first time, caches it locally if the executor
+-- supports that, and runs it. No manual setup is required.
+local PAYLOAD_URL = "https://raw.githubusercontent.com/9s2dyhcgwm-svg/Scripts/refs/heads/main/Minecraft%20Steve%20Payload"
+local CACHE_PATH = "SteveDev/Minecraft Steve.obfuscated.luau"
+local expectedSize=16610782
+local expectedHash="fd699d73882853e7ff5f3dc9335471bf1c2391af77806a6a2169672660def08e"
+assert(type(loadstring)=="function","This launcher requires client loadstring support.")
+local function sha256(message)
+  local bit = bit32
+  assert(type(bit) == "table" and type(bit.rrotate) == "function", "SHA-256 requires bit32.rrotate")
+  local MOD = 4294967296
+  local K = {
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2,
+  }
+  local H = { 0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19 }
+  local function be32(n)
+    return string.char(
+      math.floor(n / 16777216) % 256,
+      math.floor(n / 65536) % 256,
+      math.floor(n / 256) % 256,
+      n % 256
+    )
+  end
+  local function hex32(n)
+    local digits = "0123456789abcdef"
+    local out = {}
+    for i = 8, 1, -1 do
+      local digit = n % 16
+      out[i] = digits:sub(digit + 1, digit + 1)
+      n = math.floor(n / 16)
+    end
+    return table.concat(out)
+  end
+
+  local bitLength = #message * 8
+  local high = math.floor(bitLength / MOD)
+  local low = bitLength % MOD
+  local data = message .. string.char(128)
+  data = data .. string.rep("\0", (56 - (#data % 64)) % 64) .. be32(high) .. be32(low)
+
+  for offset = 1, #data, 64 do
+    local w = {}
+    for i = 0, 15 do
+      local j = offset + i * 4
+      local b1, b2, b3, b4 = string.byte(data, j, j + 3)
+      w[i] = b1 * 16777216 + b2 * 65536 + b3 * 256 + b4
+    end
+    for i = 16, 63 do
+      local x, y = w[i - 15], w[i - 2]
+      local s0 = bit.bxor(bit.rrotate(x, 7), bit.rrotate(x, 18), bit.rshift(x, 3))
+      local s1 = bit.bxor(bit.rrotate(y, 17), bit.rrotate(y, 19), bit.rshift(y, 10))
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) % MOD
+    end
+
+    local a,b,c,d,e,f,g,h = H[1],H[2],H[3],H[4],H[5],H[6],H[7],H[8]
+    for i = 0, 63 do
+      local s1 = bit.bxor(bit.rrotate(e, 6), bit.rrotate(e, 11), bit.rrotate(e, 25))
+      local choice = bit.bxor(bit.band(e, f), bit.band(bit.bnot(e), g))
+      local t1 = (h + s1 + choice + K[i + 1] + w[i]) % MOD
+      local s0 = bit.bxor(bit.rrotate(a, 2), bit.rrotate(a, 13), bit.rrotate(a, 22))
+      local majority = bit.bxor(bit.band(a, b), bit.band(a, c), bit.band(b, c))
+      local t2 = (s0 + majority) % MOD
+      h,g,f,e,d,c,b,a = g,f,e,(d + t1) % MOD,c,b,a,(t1 + t2) % MOD
+    end
+    H[1]=(H[1]+a)%MOD; H[2]=(H[2]+b)%MOD; H[3]=(H[3]+c)%MOD; H[4]=(H[4]+d)%MOD
+    H[5]=(H[5]+e)%MOD; H[6]=(H[6]+f)%MOD; H[7]=(H[7]+g)%MOD; H[8]=(H[8]+h)%MOD
+  end
+  return hex32(H[1])..hex32(H[2])..hex32(H[3])..hex32(H[4])..
+    hex32(H[5])..hex32(H[6])..hex32(H[7])..hex32(H[8])
+end
+-- a previously cached copy, if this executor kept one and it still matches exactly
+local source
+if type(readfile) == "function" and type(isfile) == "function" then
+  local ok, cached = pcall(isfile, CACHE_PATH)
+  if ok and cached then
+    local okRead, body = pcall(readfile, CACHE_PATH)
+    if okRead and type(body) == "string" and #body == expectedSize and sha256(body) == expectedHash then
+      source = body
+    end
+  end
+end
+-- otherwise fetch it straight from the same place this launcher came from
+if not source then
+  assert(type(game) == "userdata" or type(game) == "table", "This launcher requires the Roblox game object.")
+  local getter = game.HttpGet
+  assert(type(getter) == "function", "This launcher requires game:HttpGet.")
+  local okGet, body = pcall(getter, game, PAYLOAD_URL)
+  assert(okGet and type(body) == "string" and #body > 0, "Could not download the protected file: "..tostring(body))
+  assert(#body == expectedSize, "Downloaded file is incomplete or outdated (size mismatch); try again in a moment.")
+  assert(sha256(body) == expectedHash, "Downloaded file failed its integrity check; try again in a moment.")
+  source = body
+  -- cache it for next time, if this executor can write files (not required; a failure here is silent and harmless)
+  if type(writefile) == "function" then
+    pcall(function()
+      if type(isfolder) == "function" and type(makefolder) == "function" and not isfolder("SteveDev") then
+        makefolder("SteveDev")
+      end
+      writefile(CACHE_PATH, source)
+    end)
+  end
+end
+local run,err=loadstring(source,"@Minecraft Steve.obfuscated.luau")
+assert(run,err)
+source=nil
+return run()
