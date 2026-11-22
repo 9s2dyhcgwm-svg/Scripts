@@ -4,8 +4,8 @@
 -- supports that, and runs it. No manual setup is required.
 local PAYLOAD_URL = "https://raw.githubusercontent.com/9s2dyhcgwm-svg/Scripts/refs/heads/main/Verity%20Payload"
 local CACHE_PATH = "VerityDev/The Verity Script.obfuscated.luau"
-local expectedSize=2137165
-local expectedHash="183939c32c5ad90dbbd78262b6227629d26fd74f0158ae37731aeb6c05f95396"
+local expectedSize=2137208
+local expectedHash="7671d776a576bf03fcd9a4d354b5dfa1c1179d8772a0bb9c289f07ef03c4cf2f"
 assert(type(loadstring)=="function","This launcher requires client loadstring support.")
 local function sha256(message)
   local bit = bit32
