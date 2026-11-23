@@ -4,8 +4,8 @@
 -- supports that, and runs it. No manual setup is required.
 local PAYLOAD_URL = "https://raw.githubusercontent.com/9s2dyhcgwm-svg/Scripts/refs/heads/main/Minecraft%20Steve%20Payload"
 local CACHE_PATH = "SteveDev/Minecraft Steve.obfuscated.luau"
-local expectedSize=16768196
-local expectedHash="a5e74b509d3d1f0b6484c7735acbf76bb4d2f186f34b833a96a93b769bb5a132"
+local expectedSize=16777018
+local expectedHash="7b42bd4595d2b0934af12f323bd482fa25225464361e6c8eb547f618018a52a3"
 assert(type(loadstring)=="function","This launcher requires client loadstring support.")
 local function sha256(message)
   local bit = bit32
